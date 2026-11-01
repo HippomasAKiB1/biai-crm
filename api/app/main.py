@@ -14,6 +14,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+from .routes.analyze import router as analyze_router
+
+app.include_router(analyze_router)
 
 
 @app.get("/health")
