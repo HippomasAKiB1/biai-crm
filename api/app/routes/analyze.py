@@ -38,6 +38,7 @@ class AnalyzeReplyRequest(BaseModel):
 class AnalyzeReplyResponse(BaseModel):
     reply: str | None
     effective_language: Literal["banglish", "english"]
+    source: Literal["cache", "llm", "guard", "spam"]
 
 
 @router.post("/api/analyze/reply", response_model=AnalyzeReplyResponse)
@@ -45,7 +46,7 @@ def analyze_reply(req: AnalyzeReplyRequest) -> AnalyzeReplyResponse:
     if not req.message.strip():
         raise HTTPException(400, "message is required")
     try:
-        reply = generate_reply(
+        reply, source = generate_reply(
             req.message, req.extracted, force_language=req.force_language
         )
     except ReplyError as e:
@@ -57,4 +58,4 @@ def analyze_reply(req: AnalyzeReplyRequest) -> AnalyzeReplyResponse:
         eff = "banglish"
     else:
         eff = req.extracted.language
-    return AnalyzeReplyResponse(reply=reply, effective_language=eff)
+    return AnalyzeReplyResponse(reply=reply, effective_language=eff, source=source)
