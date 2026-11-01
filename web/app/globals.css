@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f8fafc;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --accent: #059669;
+  --danger: #ef4444;
+}
+
+html,
+body {
+  font-family: "Noto Sans Bengali", var(--font-bengali), system-ui, sans-serif;
+  background-color: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+}
+
+.font-bangla {
+  font-family: "Noto Sans Bengali", var(--font-bengali), system-ui, sans-serif;
+}
