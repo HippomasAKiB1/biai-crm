@@ -65,3 +65,74 @@ def extract(raw_message: str) -> tuple[ExtractResult, str]:
             raise LLMValidationError(
                 f"Failed to validate LLM output after retry: {second_err}"
             ) from second_err
+
+
+REPLY_PROMPT = (REPO_ROOT / "prompts" / "reply.md").read_text(encoding="utf-8")
+KB_JSON = (REPO_ROOT / "data" / "knowledge_base.json").read_text(encoding="utf-8")
+
+
+class ReplyError(Exception):
+    pass
+
+
+def generate_reply(
+    raw_message: str,
+    extracted: "ExtractResult",
+    force_language: str | None = None,
+) -> str | None:
+    """
+    Returns the reply string, or None if the message must not be replied to
+    (spam). Raises ReplyError only on provider failure.
+    """
+
+    # (a) Hard skip — spam never gets a reply
+    if extracted.category == "spam":
+        return None
+
+    # (b) Resolve effective reply language
+    if force_language in ("english", "banglish"):
+        effective = force_language
+    elif extracted.language == "bangla":
+        effective = "banglish"  # PRD: bangla → banglish by default
+    else:
+        effective = extracted.language
+
+    # (c) Compose the user message — everything prompts/reply.md promises
+    # to receive
+    user_content = (
+        "RAW MESSAGE:\n"
+        + raw_message
+        + "\n\n"
+        + "EXTRACTED:\n"
+        + f"- language: {extracted.language}\n"
+        + f"- reply_language: {effective}\n"
+        + f"- category: {extracted.category}\n"
+        + f"- interest: {extracted.interest}\n"
+        + f"- company: {extracted.company or 'n/a'}\n"
+        + f"- headcount: {extracted.headcount if extracted.headcount is not None else 'n/a'}\n"
+        + f"- sender_name: {extracted.sender_name or 'n/a'}\n\n"
+        + "KNOWLEDGE BASE:\n"
+        + KB_JSON
+        + "\n\n"
+        + f"Write ONE reply in {effective} per the system prompt. Reply text only."
+    )
+
+    # (d) Single call — text mode, no response_format
+    try:
+        resp = client.chat.completions.create(
+            model=settings.llm_model,
+            messages=[
+                {"role": "system", "content": REPLY_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+            timeout=30.0,
+        )
+    except Exception as e:
+        raise ReplyError(f"reply generation failed: {str(e)[:200]}") from e
+
+    text = (resp.choices[0].message.content or "").strip()
+    if not text:
+        raise ReplyError("empty reply from LLM")
+    return text
