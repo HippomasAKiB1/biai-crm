@@ -14,7 +14,7 @@ id,language,category,interest,status,priority,review_required
 13,bangla,minor,Unknown,New,normal,true
 14,english,sales_lead,Fellowship,New,normal,false
 15,banglish,pre_sales_question,Unknown,New,low,false
-16,english,support,Unknown,Outside,urgent,true
+16,english,refund,Unknown,Outside,urgent,true
 17,banglish,pre_sales_question,Unknown,New,low,true
 18,bangla,sales_lead,Corporate Training,New,high,false
 19,english,sales_lead,Fellowship,New,normal,false
