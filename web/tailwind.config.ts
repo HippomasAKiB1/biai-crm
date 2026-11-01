@@ -8,7 +8,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Noto Sans Bengali"', "system-ui", "sans-serif"],
+        sans: ["var(--font-bengali)", "system-ui", "sans-serif"],
       },
     },
   },
