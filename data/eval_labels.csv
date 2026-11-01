@@ -1,0 +1,21 @@
+id,language,category,interest,status,priority,review_required
+1,banglish,sales_lead,Bootcamp,New,high,false
+2,bangla,sales_lead,Fellowship,New,normal,false
+3,english,sales_lead,Corporate Training,New,high,false
+4,banglish,pre_sales_question,Unknown,New,low,false
+5,english,sales_lead,Unknown,Contacted,normal,false
+6,banglish,pre_sales_question,Unknown,New,low,true
+7,bangla,support,Unknown,Outside,urgent,true
+8,english,pre_sales_question,Unknown,New,normal,true
+9,banglish,pre_sales_question,Unknown,New,low,false
+10,english,sales_lead,Corporate Training,New,high,false
+11,english,spam,None,Outside,none,false
+12,banglish,sales_lead,Bootcamp,New,high,false
+13,bangla,minor,Unknown,New,normal,true
+14,english,sales_lead,Fellowship,New,normal,false
+15,banglish,pre_sales_question,Unknown,New,low,false
+16,english,support,Unknown,Outside,urgent,true
+17,banglish,pre_sales_question,Unknown,New,low,true
+18,bangla,sales_lead,Corporate Training,New,high,false
+19,english,sales_lead,Fellowship,New,normal,false
+20,english,job_seeker,None,Outside,none,false

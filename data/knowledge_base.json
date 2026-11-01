@@ -1,0 +1,45 @@
+{
+  "organization": {
+    "name": "BIAI",
+    "description": "BIAI runs short, practical AI programs for individuals and companies in Bangladesh.",
+    "contact_email": "support@biai.com.bd",
+    "careers_email": "careers@biai.com.bd",
+    "website": "https://biai.com.bd"
+  },
+  "programs": {
+    "Bootcamp": {
+      "summary": "A short, hands-on AI bootcamp for people who want to build with AI tools.",
+      "duration": "3 days",
+      "format": "Live online classes with recordings available after each session.",
+      "audience": "Beginners and working professionals.",
+      "certificate": "A BIAI certificate of completion is provided. Accreditation details are not published — staff must confirm."
+    },
+    "Fellowship": {
+      "summary": "A longer guided program for people building a career in AI. Includes portfolio work and mentorship.",
+      "format": "Cohort-based, live sessions plus recordings.",
+      "audience": "People with some background, technical or non-technical, who want a structured path into AI work.",
+      "coding_required": "Not required for every track. Staff must confirm for the applicant's chosen track.",
+      "certificate": "A BIAI certificate of completion is provided. Accreditation details are not published — staff must confirm."
+    },
+    "Corporate Training": {
+      "summary": "Custom AI training for teams and companies, delivered online or onsite.",
+      "format": "Online or onsite, scoped per company.",
+      "next_step": "A team member schedules a discovery call to scope headcount, goals and pricing."
+    }
+  },
+  "payment": {
+    "methods": ["bKash", "Bank transfer"],
+    "instalments": "Instalment options may be available. Staff must confirm per program.",
+    "confirmation": "After payment, the team sends a confirmation by WhatsApp or email. If a customer paid and did not receive confirmation, ask them for the TrxID and the sender number."
+  },
+  "policies": {
+    "refunds": "Refund eligibility depends on the program and timing. Staff must confirm before any refund is promised.",
+    "discounts": "Discounts may be available for students or groups. Staff must confirm before quoting.",
+    "lifetime_access": "Recordings for the program are shared with enrolled participants. Exact access terms must be confirmed by staff.",
+    "add_ons": "Add-ons are optional extras. Staff must confirm which add-ons are available for a specific cohort."
+  },
+  "free_events": {
+    "masterclass": "BIAI occasionally runs free masterclasses. Eligibility (including for school students) must be confirmed by staff — do not promise a seat."
+  },
+  "unknown_facts_policy": "If a fact (price, start date, refund terms, certificate accreditation, instalment availability, discounts) is not in this knowledge base, the reply must ask a clarifying question or say a team member will confirm, and use a placeholder like [CONFIRM: price]."
+}
