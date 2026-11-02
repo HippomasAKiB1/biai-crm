@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { STAGES, STAGE_COLORS, type Stage } from "@/lib/config";
 import type { EnquiryResponse } from "@/lib/types";
-import { getEnquiries, updateEnquiry } from "@/lib/api";
+import { getEnquiries, getFollowups, updateEnquiry } from "@/lib/api";
 import { LeadCard } from "@/components/LeadCard";
 
 const INTEREST_OPTIONS = [
@@ -37,6 +38,7 @@ const CATEGORY_OPTIONS = [
 
 export default function PipelinePage() {
   const [enquiries, setEnquiries] = useState<EnquiryResponse[]>([]);
+  const [overdueFollowupsCount, setOverdueFollowupsCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,13 +52,19 @@ export default function PipelinePage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await getEnquiries({
-        excludeOutside: true,
-        interest: filterInterest !== "All Interests" ? filterInterest : undefined,
-        channel: filterChannel !== "All Channels" ? filterChannel : undefined,
-        category: filterCategory !== "All Categories" ? filterCategory : undefined,
-      });
+      const [res, followupsRes] = await Promise.all([
+        getEnquiries({
+          excludeOutside: true,
+          interest: filterInterest !== "All Interests" ? filterInterest : undefined,
+          channel: filterChannel !== "All Channels" ? filterChannel : undefined,
+          category: filterCategory !== "All Categories" ? filterCategory : undefined,
+        }),
+        getFollowups().catch(() => null),
+      ]);
       setEnquiries(res.items);
+      if (followupsRes) {
+        setOverdueFollowupsCount(followupsRes.overdue_count);
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to load pipeline leads");
     } finally {
@@ -162,6 +170,22 @@ export default function PipelinePage() {
           >
             Retry
           </button>
+        </div>
+      )}
+
+      {/* Overdue Follow-ups Alert Strip */}
+      {overdueFollowupsCount !== null && overdueFollowupsCount > 0 && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-1.5">
+            <span>⚠</span>
+            <span>{overdueFollowupsCount} overdue follow-ups</span>
+          </div>
+          <Link
+            href="/insights"
+            className="underline hover:text-rose-950 font-bold"
+          >
+            View Today&apos;s list →
+          </Link>
         </div>
       )}
 

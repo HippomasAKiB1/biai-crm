@@ -31,10 +31,12 @@ app.add_middleware(
 from .routes.analyze import router as analyze_router
 from .routes.import_sample import router as import_router
 from .routes.enquiries import router as enquiries_router
+from .routes.followups import router as followups_router
 
 app.include_router(analyze_router)
 app.include_router(import_router)
 app.include_router(enquiries_router)
+app.include_router(followups_router)
 
 
 @app.get("/health")

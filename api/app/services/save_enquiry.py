@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from ..models import Contact, Enquiry, Activity
 from ..schemas import ExtractedEnquiry
 from ..llm.client import generate_reply
+from .callback_parse import parse_callback_hint
 
 logger = logging.getLogger("biai.save_enquiry")
 
@@ -82,11 +83,13 @@ def save_enquiry(
         priority = extracted.priority
 
     # 4. follow_up_due
-    follow_up_due = (
-        received_at + timedelta(hours=2)
-        if priority == "urgent"
-        else received_at + timedelta(hours=24)
-    )
+    hint = parse_callback_hint(raw_message, received_at)
+    if hint:
+        follow_up_due = hint
+    elif priority == "urgent":
+        follow_up_due = received_at + timedelta(hours=2)
+    else:
+        follow_up_due = received_at + timedelta(hours=24)
 
     # 5. Create Enquiry
     enquiry = Enquiry(

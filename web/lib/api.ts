@@ -185,4 +185,22 @@ export async function unspamEnquiry(id: number): Promise<EnquiryResponse> {
   return res.json();
 }
 
+export async function getFollowups(): Promise<{
+  items: EnquiryResponse[];
+  total: number;
+  overdue_count: number;
+  due_today_count: number;
+}> {
+  const res = await fetch(`${API_BASE}/api/followups`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Get followups failed (${res.status})`);
+  }
+  return res.json();
+}
+
+
 
