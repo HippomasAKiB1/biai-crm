@@ -442,6 +442,43 @@ export default function InboxPage() {
 
                   <div>
                     <label className="block font-medium text-slate-600 mb-1">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={editedFields.phone ?? currentExtracted.phone ?? ""}
+                      onChange={(e) =>
+                        setEditedFields((prev) => ({
+                          ...prev,
+                          phone: e.target.value || null,
+                        }))
+                      }
+                      onBlur={(e) => {
+                        const val = e.target.value;
+                        const digits = val.replace(/\D/g, "");
+                        let norm = digits;
+                        if (digits.length === 13 && digits.startsWith("880")) {
+                          norm = digits.slice(2);
+                        } else if (digits.length === 12 && digits.startsWith("88")) {
+                          norm = "0" + digits.slice(2);
+                        } else if (digits.length === 10 && digits.startsWith("1")) {
+                          norm = "0" + digits;
+                        }
+                        setEditedFields((prev) => ({
+                          ...prev,
+                          phone: norm || null,
+                        }));
+                      }}
+                      placeholder="e.g. 01711000001 (leave empty if not given)"
+                      className="w-full rounded-lg border border-slate-200 p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Normalized on save. Missing phone is normal.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-600 mb-1">
                       Follow-up Due
                     </label>
                     <input

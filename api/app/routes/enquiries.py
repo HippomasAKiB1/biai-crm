@@ -7,8 +7,14 @@ from sqlmodel import Session, select, desc
 
 from ..db import get_session
 from ..models import Enquiry, Contact, Activity
-from ..schemas import ExtractedEnquiry
+from ..schemas import (
+    ExtractedEnquiry,
+    EnquiryResponse,
+    EnquiryListResponse,
+    EnquiryDetailResponse,
+)
 from ..services.save_enquiry import save_enquiry
+from ..settings import settings
 
 router = APIRouter()
 
@@ -29,15 +35,39 @@ class UpdateEnquiryRequest(BaseModel):
     needs_review: bool | None = None
 
 
-class EnquiryListResponse(BaseModel):
-    items: list[Enquiry]
-    total: int
+def build_enquiry_response(enquiry: Enquiry, contact: Contact | None = None) -> EnquiryResponse:
+    demo_date = settings.demo_date.replace(tzinfo=None) if settings.demo_date.tzinfo else settings.demo_date
+    rec_at = enquiry.received_at.replace(tzinfo=None) if enquiry.received_at.tzinfo else enquiry.received_at
+    days_since = (demo_date - rec_at).days
+    is_overdue = days_since >= 2 and enquiry.status in ("New", "Contacted")
 
-
-class EnquiryDetailResponse(BaseModel):
-    enquiry: Enquiry
-    contact: Contact
-    activities: list[Activity]
+    return EnquiryResponse(
+        id=enquiry.id,
+        contact_id=enquiry.contact_id,
+        channel=enquiry.channel,
+        received_at=enquiry.received_at,
+        raw_message=enquiry.raw_message,
+        interest=enquiry.interest,
+        category=enquiry.category,
+        language=enquiry.language,
+        urgency=enquiry.urgency,
+        priority=enquiry.priority,
+        status=enquiry.status,
+        summary=enquiry.summary,
+        confidence=enquiry.confidence,
+        needs_review=enquiry.needs_review,
+        review_reason=enquiry.review_reason,
+        follow_up_due=enquiry.follow_up_due,
+        reply_draft=enquiry.reply_draft,
+        company=enquiry.company,
+        headcount=enquiry.headcount,
+        created_at=enquiry.created_at,
+        updated_at=enquiry.updated_at,
+        contact_name=contact.name if contact else None,
+        contact_phone=contact.phone_normalized if contact else None,
+        days_since_last_touch=days_since,
+        is_overdue=is_overdue,
+    )
 
 
 @router.post("/api/enquiries", response_model=EnquiryDetailResponse)
@@ -58,7 +88,7 @@ def create_enquiry(
         select(Activity).where(Activity.enquiry_id == enquiry.id).order_by(Activity.at.asc())
     ).all()
     return EnquiryDetailResponse(
-        enquiry=enquiry,
+        enquiry=build_enquiry_response(enquiry, contact),
         contact=contact,
         activities=activities,
     )
@@ -67,26 +97,55 @@ def create_enquiry(
 @router.get("/api/enquiries", response_model=EnquiryListResponse)
 def list_enquiries(
     status: str | None = Query(default=None),
+    status_in: str | None = Query(default=None),
     category: str | None = Query(default=None),
-    limit: int = Query(default=100, le=500),
+    interest: str | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    exclude_outside: bool = Query(default=False),
+    limit: int = Query(default=200, le=500),
     session: Session = Depends(get_session),
 ) -> EnquiryListResponse:
     query = select(Enquiry)
+    if exclude_outside:
+        query = query.where(Enquiry.status != "Outside")
     if status:
         query = query.where(Enquiry.status == status)
+    if status_in:
+        statuses = [s.strip() for s in status_in.split(",") if s.strip()]
+        if statuses:
+            query = query.where(Enquiry.status.in_(statuses))
     if category:
         query = query.where(Enquiry.category == category)
+    if interest:
+        query = query.where(Enquiry.interest == interest)
+    if channel:
+        query = query.where(Enquiry.channel == channel)
+
     query = query.order_by(desc(Enquiry.received_at)).limit(limit)
     items = session.exec(query).all()
 
     count_query = select(Enquiry)
+    if exclude_outside:
+        count_query = count_query.where(Enquiry.status != "Outside")
     if status:
         count_query = count_query.where(Enquiry.status == status)
+    if status_in:
+        statuses = [s.strip() for s in status_in.split(",") if s.strip()]
+        if statuses:
+            count_query = count_query.where(Enquiry.status.in_(statuses))
     if category:
         count_query = count_query.where(Enquiry.category == category)
+    if interest:
+        count_query = count_query.where(Enquiry.interest == interest)
+    if channel:
+        count_query = count_query.where(Enquiry.channel == channel)
     total = len(session.exec(count_query).all())
 
-    return EnquiryListResponse(items=items, total=total)
+    contact_ids = {e.contact_id for e in items}
+    contacts = {c.id: c for c in session.exec(select(Contact).where(Contact.id.in_(contact_ids))).all()} if contact_ids else {}
+
+    response_items = [build_enquiry_response(e, contacts.get(e.contact_id)) for e in items]
+    return EnquiryListResponse(items=response_items, total=total)
 
 
 @router.get("/api/enquiries/{id}", response_model=EnquiryDetailResponse)
@@ -102,18 +161,18 @@ def get_enquiry_detail(
         select(Activity).where(Activity.enquiry_id == enquiry.id).order_by(Activity.at.asc())
     ).all()
     return EnquiryDetailResponse(
-        enquiry=enquiry,
+        enquiry=build_enquiry_response(enquiry, contact),
         contact=contact,
         activities=activities,
     )
 
 
-@router.patch("/api/enquiries/{id}", response_model=Enquiry)
+@router.patch("/api/enquiries/{id}", response_model=EnquiryResponse)
 def patch_enquiry(
     id: int,
     req: UpdateEnquiryRequest,
     session: Session = Depends(get_session),
-) -> Enquiry:
+) -> EnquiryResponse:
     enquiry = session.exec(select(Enquiry).where(Enquiry.id == id)).first()
     if not enquiry:
         raise HTTPException(status_code=404, detail="Enquiry not found")
@@ -162,5 +221,7 @@ def patch_enquiry(
     session.add(enquiry)
     session.commit()
     session.refresh(enquiry)
-    return enquiry
+    contact = session.exec(select(Contact).where(Contact.id == enquiry.contact_id)).first()
+    return build_enquiry_response(enquiry, contact)
+
 

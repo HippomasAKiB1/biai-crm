@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, ConfigDict
+from .models import Contact, Activity
 
 
 class ExtractResult(BaseModel):
@@ -50,4 +52,46 @@ class AnalyzeSaveResponse(BaseModel):
     contact_id: int
     status: str
     is_duplicate: bool
+
+
+class EnquiryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int | None = None
+    contact_id: int
+    channel: str
+    received_at: datetime
+    raw_message: str
+    interest: str = "Unknown"
+    category: str | None = None
+    language: str | None = None
+    urgency: str | None = None
+    priority: str = "normal"
+    status: str = "New"
+    summary: str | None = None
+    confidence: float | None = None
+    needs_review: bool = False
+    review_reason: str | None = None
+    follow_up_due: datetime | None = None
+    reply_draft: str | None = None
+    company: str | None = None
+    headcount: int | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    contact_name: str | None = None
+    contact_phone: str | None = None
+    days_since_last_touch: int = 0
+    is_overdue: bool = False
+
+
+class EnquiryListResponse(BaseModel):
+    items: list[EnquiryResponse]
+    total: int
+
+
+class EnquiryDetailResponse(BaseModel):
+    enquiry: EnquiryResponse
+    contact: Contact
+    activities: list[Activity]
 

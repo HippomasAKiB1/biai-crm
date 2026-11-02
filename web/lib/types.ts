@@ -91,3 +91,22 @@ export interface Activity {
   to_value: string | null;
   at: string;
 }
+
+export interface EnquiryResponse extends Enquiry {
+  contact_name: string | null;
+  contact_phone: string | null;
+  days_since_last_touch: number;
+  is_overdue: boolean;
+}
+
+export interface EnquiryListResponse {
+  items: EnquiryResponse[];
+  total: number;
+}
+
+export interface EnquiryDetailResponse {
+  enquiry: EnquiryResponse;
+  contact: Contact;
+  activities: Activity[];
+}
+
