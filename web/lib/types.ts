@@ -95,6 +95,7 @@ export interface Activity {
 export interface EnquiryResponse extends Enquiry {
   contact_name: string | null;
   contact_phone: string | null;
+  contact_enquiry_count: number;
   days_since_last_touch: number;
   is_overdue: boolean;
 }

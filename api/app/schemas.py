@@ -81,6 +81,7 @@ class EnquiryResponse(BaseModel):
 
     contact_name: str | None = None
     contact_phone: str | None = None
+    contact_enquiry_count: int = 1
     days_since_last_touch: int = 0
     is_overdue: bool = False
 

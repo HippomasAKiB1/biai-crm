@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlmodel import Session, select, desc
 
 from ..db import get_session
@@ -36,7 +37,17 @@ class UpdateEnquiryRequest(BaseModel):
     needs_review: bool | None = None
 
 
-def build_enquiry_response(enquiry: Enquiry, contact: Contact | None = None) -> EnquiryResponse:
+def _enquiry_count(session: Session, contact_id: int) -> int:
+    return session.exec(
+        select(func.count(Enquiry.id)).where(Enquiry.contact_id == contact_id)
+    ).one()
+
+
+def build_enquiry_response(
+    enquiry: Enquiry,
+    contact: Contact | None = None,
+    contact_enquiry_count: int = 1,
+) -> EnquiryResponse:
     demo_date = settings.demo_date.replace(tzinfo=None) if settings.demo_date.tzinfo else settings.demo_date
     rec_at = enquiry.received_at.replace(tzinfo=None) if enquiry.received_at.tzinfo else enquiry.received_at
     days_since = (demo_date - rec_at).days
@@ -66,6 +77,7 @@ def build_enquiry_response(enquiry: Enquiry, contact: Contact | None = None) -> 
         updated_at=enquiry.updated_at,
         contact_name=contact.name if contact else None,
         contact_phone=contact.phone_normalized if contact else None,
+        contact_enquiry_count=contact_enquiry_count,
         days_since_last_touch=days_since,
         is_overdue=is_overdue,
     )
@@ -89,7 +101,9 @@ def create_enquiry(
         select(Activity).where(Activity.enquiry_id == enquiry.id).order_by(Activity.at.asc())
     ).all()
     return EnquiryDetailResponse(
-        enquiry=build_enquiry_response(enquiry, contact),
+        enquiry=build_enquiry_response(
+            enquiry, contact, _enquiry_count(session, enquiry.contact_id)
+        ),
         contact=contact,
         activities=activities,
     )
@@ -158,8 +172,16 @@ def list_enquiries(
 
     contact_ids = {e.contact_id for e in items}
     contacts = {c.id: c for c in session.exec(select(Contact).where(Contact.id.in_(contact_ids))).all()} if contact_ids else {}
+    counts = {c_id: _enquiry_count(session, c_id) for c_id in contact_ids}
 
-    response_items = [build_enquiry_response(e, contacts.get(e.contact_id)) for e in items]
+    response_items = [
+        build_enquiry_response(
+            e,
+            contacts.get(e.contact_id),
+            counts.get(e.contact_id, 1),
+        )
+        for e in items
+    ]
     return EnquiryListResponse(items=response_items, total=total)
 
 
@@ -176,7 +198,9 @@ def get_enquiry_detail(
         select(Activity).where(Activity.enquiry_id == enquiry.id).order_by(Activity.at.asc())
     ).all()
     return EnquiryDetailResponse(
-        enquiry=build_enquiry_response(enquiry, contact),
+        enquiry=build_enquiry_response(
+            enquiry, contact, _enquiry_count(session, enquiry.contact_id)
+        ),
         contact=contact,
         activities=activities,
     )
@@ -249,7 +273,9 @@ def patch_enquiry(
     session.commit()
     session.refresh(enquiry)
     contact = session.exec(select(Contact).where(Contact.id == enquiry.contact_id)).first()
-    return build_enquiry_response(enquiry, contact)
+    return build_enquiry_response(
+        enquiry, contact, _enquiry_count(session, enquiry.contact_id)
+    )
 
 
 @router.post("/api/enquiries/{id}/unspam", response_model=EnquiryResponse)
@@ -288,7 +314,9 @@ def unspam_enquiry(id: int, session: Session = Depends(get_session)) -> EnquiryR
     )
     session.commit()
     contact = session.exec(select(Contact).where(Contact.id == e.contact_id)).first()
-    return build_enquiry_response(e, contact)
+    return build_enquiry_response(
+        e, contact, _enquiry_count(session, e.contact_id)
+    )
 
 
 

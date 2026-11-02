@@ -95,6 +95,14 @@ export function LeadCard({ enquiry, onStatusChange }: LeadCardProps) {
                 ⚠ Review
               </span>
             )}
+            {enquiry.contact_enquiry_count > 1 && (
+              <span
+                className="text-xs px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium"
+                title={`This contact has ${enquiry.contact_enquiry_count} enquiries`}
+              >
+                ×{enquiry.contact_enquiry_count}
+              </span>
+            )}
             {enquiry.priority && enquiry.priority !== "normal" && (
               <span
                 className={`px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider border ${getPriorityStyle(

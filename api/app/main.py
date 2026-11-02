@@ -15,15 +15,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
+
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000",
+)
+_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+_allow_all = len(_origins) == 1 and _origins[0] == "*"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"] if _allow_all else _origins,
+    allow_credentials=not _allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
