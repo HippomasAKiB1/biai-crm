@@ -4,7 +4,13 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { STAGES, STAGE_COLORS, type Stage } from "@/lib/config";
 import type { EnquiryResponse } from "@/lib/types";
-import { getEnquiries, getFollowups, updateEnquiry } from "@/lib/api";
+import {
+  getEnquiries,
+  getFollowups,
+  getPrecomputedStatus,
+  importPrecomputed,
+  updateEnquiry,
+} from "@/lib/api";
 import { LeadCard } from "@/components/LeadCard";
 
 const INTEREST_OPTIONS = [
@@ -39,6 +45,13 @@ const CATEGORY_OPTIONS = [
 export default function PipelinePage() {
   const [enquiries, setEnquiries] = useState<EnquiryResponse[]>([]);
   const [overdueFollowupsCount, setOverdueFollowupsCount] = useState<number | null>(null);
+  const [precomputedStatus, setPrecomputedStatus] = useState<{
+    empty: boolean;
+    seed_available: boolean;
+  } | null>(null);
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +65,7 @@ export default function PipelinePage() {
     try {
       setLoading(true);
       setError(null);
-      const [res, followupsRes] = await Promise.all([
+      const [res, followupsRes, statusRes] = await Promise.all([
         getEnquiries({
           excludeOutside: true,
           interest: filterInterest !== "All Interests" ? filterInterest : undefined,
@@ -60,15 +73,34 @@ export default function PipelinePage() {
           category: filterCategory !== "All Categories" ? filterCategory : undefined,
         }),
         getFollowups().catch(() => null),
+        getPrecomputedStatus().catch(() => null),
       ]);
       setEnquiries(res.items);
       if (followupsRes) {
         setOverdueFollowupsCount(followupsRes.overdue_count);
       }
+      if (statusRes) {
+        setPrecomputedStatus(statusRes);
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to load pipeline leads");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSeed = async () => {
+    try {
+      setSeedLoading(true);
+      setSeedError(null);
+      await importPrecomputed(true);
+      setToast("Loaded 20 enquiries");
+      setTimeout(() => setToast(null), 4000);
+      await loadEnquiries();
+    } catch (err: any) {
+      setSeedError("Seed failed — check backend");
+    } finally {
+      setSeedLoading(false);
     }
   };
 
@@ -189,68 +221,109 @@ export default function PipelinePage() {
         </div>
       )}
 
-      {/* Board Columns (Horizontal scroll container on smaller screens) */}
-      <div className="overflow-x-auto pb-6">
-        <div className="flex gap-4 min-w-[1440px] items-start">
-          {STAGES.map((stage) => {
-            const badgeColor =
-              STAGE_COLORS[stage] || "bg-slate-100 text-slate-700";
-            const stageLeads = enquiries.filter((e) => e.status === stage);
-            const overdueCount = stageLeads.filter((e) => e.is_overdue).length;
+      {/* Empty State Seed Card or Board Columns */}
+      {!loading &&
+      precomputedStatus?.empty &&
+      precomputedStatus?.seed_available &&
+      enquiries.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-xs space-y-4 my-8">
+          <div className="text-4xl">🗂</div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              Demo database is empty.
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Click below to load the 20 sample enquiries (no API calls —
+              instant).
+            </p>
+          </div>
 
-            return (
-              <div
-                key={stage}
-                className="w-[280px] shrink-0 bg-slate-50/80 rounded-xl border border-slate-200/90 p-3 flex flex-col gap-3"
-              >
-                {/* Column header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-md ${badgeColor}`}
-                    >
-                      {stage}
-                    </span>
-                    <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                      {stageLeads.length}
-                    </span>
+          {seedError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg font-medium">
+              {seedError}
+            </div>
+          )}
+
+          <button
+            onClick={handleSeed}
+            disabled={seedLoading}
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors shadow-xs disabled:opacity-50"
+          >
+            {seedLoading ? "Loading..." : "Load 20 sample enquiries"}
+          </button>
+        </div>
+      ) : (
+        /* Board Columns (Horizontal scroll container on smaller screens) */
+        <div className="overflow-x-auto pb-6">
+          <div className="flex gap-4 min-w-[1440px] items-start">
+            {STAGES.map((stage) => {
+              const badgeColor =
+                STAGE_COLORS[stage] || "bg-slate-100 text-slate-700";
+              const stageLeads = enquiries.filter((e) => e.status === stage);
+              const overdueCount = stageLeads.filter((e) => e.is_overdue).length;
+
+              return (
+                <div
+                  key={stage}
+                  className="w-[280px] shrink-0 bg-slate-50/80 rounded-xl border border-slate-200/90 p-3 flex flex-col gap-3"
+                >
+                  {/* Column header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-md ${badgeColor}`}
+                      >
+                        {stage}
+                      </span>
+                      <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                        {stageLeads.length}
+                      </span>
+                    </div>
+
+                    {overdueCount > 0 && (
+                      <span
+                        className="text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded"
+                        title={`${overdueCount} leads need follow-up`}
+                      >
+                        {overdueCount} overdue
+                      </span>
+                    )}
                   </div>
 
-                  {overdueCount > 0 && (
-                    <span
-                      className="text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded"
-                      title={`${overdueCount} leads need follow-up`}
-                    >
-                      {overdueCount} overdue
-                    </span>
-                  )}
+                  {/* Column Cards */}
+                  <div className="flex flex-col gap-2.5 min-h-[300px]">
+                    {loading && enquiries.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
+                        Loading...
+                      </div>
+                    ) : stageLeads.length === 0 ? (
+                      <div className="py-12 border border-dashed border-slate-200 rounded-lg text-center text-xs text-slate-400">
+                        No leads in {stage}
+                      </div>
+                    ) : (
+                      stageLeads.map((enquiry) => (
+                        <LeadCard
+                          key={enquiry.id}
+                          enquiry={enquiry}
+                          onStatusChange={handleStatusChange}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
-
-                {/* Column Cards */}
-                <div className="flex flex-col gap-2.5 min-h-[300px]">
-                  {loading && enquiries.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
-                      Loading...
-                    </div>
-                  ) : stageLeads.length === 0 ? (
-                    <div className="py-12 border border-dashed border-slate-200 rounded-lg text-center text-xs text-slate-400">
-                      No leads in {stage}
-                    </div>
-                  ) : (
-                    stageLeads.map((enquiry) => (
-                      <LeadCard
-                        key={enquiry.id}
-                        enquiry={enquiry}
-                        onStatusChange={handleStatusChange}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm shadow-lg font-medium flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-2">
+          <span>✓</span>
+          <span>{toast}</span>
+        </div>
+      )}
     </div>
   );
 }

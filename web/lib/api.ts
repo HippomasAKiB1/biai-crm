@@ -202,5 +202,37 @@ export async function getFollowups(): Promise<{
   return res.json();
 }
 
+export async function importPrecomputed(reset: boolean = true): Promise<{
+  seeded: boolean;
+  contacts: number;
+  enquiries: number;
+  activity: number;
+}> {
+  const res = await fetch(`${API_BASE}/api/import-precomputed?reset=${reset}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Import precomputed failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function getPrecomputedStatus(): Promise<{
+  empty: boolean;
+  seed_available: boolean;
+}> {
+  const res = await fetch(`${API_BASE}/api/precomputed/status`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Get precomputed status failed (${res.status})`);
+  }
+  return res.json();
+}
+
+
 
 
