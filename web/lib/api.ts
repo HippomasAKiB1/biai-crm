@@ -130,6 +130,22 @@ export async function getEnquiries(params: GetEnquiriesParams = {}): Promise<Enq
   return res.json();
 }
 
+export async function getEnquiryDetail(id: number): Promise<{
+  enquiry: EnquiryResponse;
+  contact: Contact;
+  activities: Activity[];
+}> {
+  const res = await fetch(`${API_BASE}/api/enquiries/${id}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Enquiry not found (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function updateEnquiry(
   id: number,
   patch: {

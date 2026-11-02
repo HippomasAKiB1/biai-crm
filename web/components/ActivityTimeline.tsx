@@ -1,0 +1,100 @@
+"use client";
+
+import type { Activity } from "@/lib/types";
+
+interface ActivityTimelineProps {
+  activities: Activity[];
+  channel?: string;
+}
+
+function rel(at: string): string {
+  const date = new Date(at);
+  const diffMs = Date.now() - date.getTime();
+  if (isNaN(diffMs) || diffMs < 0) return "just now";
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  if (days <= 7) return `${days}d ago`;
+  return date.toISOString().split("T")[0];
+}
+
+export function ActivityTimeline({ activities, channel }: ActivityTimelineProps) {
+  if (!activities || activities.length === 0) {
+    return <div className="text-xs text-slate-400 py-3 text-center">No activity yet.</div>;
+  }
+
+  const sorted = [...activities].sort(
+    (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()
+  );
+
+  const renderDescription = (act: Activity) => {
+    switch (act.type) {
+      case "created":
+        return (
+          <span>
+            Enquiry received via{" "}
+            <span className="font-medium text-slate-800">{channel || "channel"}</span>
+          </span>
+        );
+      case "status_change":
+        return (
+          <span>
+            Status:{" "}
+            <span className="font-bangla font-medium text-slate-700">
+              {act.from_value || "None"}
+            </span>{" "}
+            →{" "}
+            <span className="font-bangla font-semibold text-slate-900">
+              {act.to_value}
+            </span>
+          </span>
+        );
+      case "note":
+        return (
+          <span>
+            Note: <span className="font-bangla text-slate-700">{act.to_value}</span>
+          </span>
+        );
+      case "reply_edited":
+        return <span>Reply updated</span>;
+      default:
+        return <span>{act.type}</span>;
+    }
+  };
+
+  const getBulletColor = (type: string) => {
+    switch (type) {
+      case "created":
+        return "bg-emerald-500";
+      case "status_change":
+        return "bg-blue-500";
+      case "note":
+        return "bg-amber-500";
+      case "reply_edited":
+        return "bg-purple-500";
+      default:
+        return "bg-slate-400";
+    }
+  };
+
+  return (
+    <div className="relative pl-5 space-y-4 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+      {sorted.map((act, idx) => (
+        <div key={act.id ?? idx} className="relative text-xs">
+          <span
+            className={`absolute -left-5 top-1 w-2.5 h-2.5 rounded-full ${getBulletColor(
+              act.type
+            )} ring-4 ring-white`}
+          />
+          <div className="text-slate-800 leading-tight">{renderDescription(act)}</div>
+          <span className="text-[11px] text-slate-400 block mt-0.5">{rel(act.at)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
