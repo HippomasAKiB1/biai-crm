@@ -36,3 +36,18 @@ class ExtractResult(BaseModel):
 
 class ExtractedEnquiry(ExtractResult):
     priority: Literal["low", "normal", "high", "urgent", "none"] = "normal"
+
+
+class AnalyzeSaveRequest(BaseModel):
+    raw_message: str
+    channel: str
+    sender_name: str | None = None
+    extracted: ExtractedEnquiry
+
+
+class AnalyzeSaveResponse(BaseModel):
+    enquiry_id: int
+    contact_id: int
+    status: str
+    is_duplicate: bool
+
