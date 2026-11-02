@@ -29,6 +29,7 @@ class CreateEnquiryRequest(BaseModel):
 
 class UpdateEnquiryRequest(BaseModel):
     status: str | None = None
+    category: str | None = None
     notes: str | None = None
     reply_draft: str | None = None
     priority: str | None = None
@@ -99,8 +100,10 @@ def list_enquiries(
     status: str | None = Query(default=None),
     status_in: str | None = Query(default=None),
     category: str | None = Query(default=None),
+    category_in: str | None = Query(default=None),
     interest: str | None = Query(default=None),
     channel: str | None = Query(default=None),
+    needs_review: bool | None = Query(default=None),
     exclude_outside: bool = Query(default=False),
     limit: int = Query(default=200, le=500),
     session: Session = Depends(get_session),
@@ -116,10 +119,16 @@ def list_enquiries(
             query = query.where(Enquiry.status.in_(statuses))
     if category:
         query = query.where(Enquiry.category == category)
+    if category_in:
+        cats = [c.strip() for c in category_in.split(",") if c.strip()]
+        if cats:
+            query = query.where(Enquiry.category.in_(cats))
     if interest:
         query = query.where(Enquiry.interest == interest)
     if channel:
         query = query.where(Enquiry.channel == channel)
+    if needs_review is not None:
+        query = query.where(Enquiry.needs_review == needs_review)
 
     query = query.order_by(desc(Enquiry.received_at)).limit(limit)
     items = session.exec(query).all()
@@ -135,10 +144,16 @@ def list_enquiries(
             count_query = count_query.where(Enquiry.status.in_(statuses))
     if category:
         count_query = count_query.where(Enquiry.category == category)
+    if category_in:
+        cats = [c.strip() for c in category_in.split(",") if c.strip()]
+        if cats:
+            count_query = count_query.where(Enquiry.category.in_(cats))
     if interest:
         count_query = count_query.where(Enquiry.interest == interest)
     if channel:
         count_query = count_query.where(Enquiry.channel == channel)
+    if needs_review is not None:
+        count_query = count_query.where(Enquiry.needs_review == needs_review)
     total = len(session.exec(count_query).all())
 
     contact_ids = {e.contact_id for e in items}
@@ -189,6 +204,18 @@ def patch_enquiry(
         )
         session.add(activity)
 
+    if req.category is not None and req.category != enquiry.category:
+        old_cat = enquiry.category
+        enquiry.category = req.category
+        activity = Activity(
+            enquiry_id=enquiry.id,
+            type="category_change",
+            from_value=old_cat,
+            to_value=req.category,
+            at=datetime.utcnow(),
+        )
+        session.add(activity)
+
     if req.notes is not None:
         note_preview = req.notes[:40]
         activity = Activity(
@@ -223,5 +250,45 @@ def patch_enquiry(
     session.refresh(enquiry)
     contact = session.exec(select(Contact).where(Contact.id == enquiry.contact_id)).first()
     return build_enquiry_response(enquiry, contact)
+
+
+@router.post("/api/enquiries/{id}/unspam", response_model=EnquiryResponse)
+def unspam_enquiry(id: int, session: Session = Depends(get_session)) -> EnquiryResponse:
+    e = session.get(Enquiry, id)
+    if not e:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+    if e.category != "spam":
+        raise HTTPException(status_code=400, detail="not spam")
+
+    e.category = "other"
+    e.status = "New"
+    e.priority = "normal"
+    e.updated_at = datetime.utcnow()
+    session.add(e)
+    session.commit()
+    session.refresh(e)
+
+    session.add(
+        Activity(
+            enquiry_id=e.id,
+            type="category_change",
+            from_value="spam",
+            to_value="other",
+            at=datetime.utcnow(),
+        )
+    )
+    session.add(
+        Activity(
+            enquiry_id=e.id,
+            type="status_change",
+            from_value="Outside",
+            to_value="New",
+            at=datetime.utcnow(),
+        )
+    )
+    session.commit()
+    contact = session.exec(select(Contact).where(Contact.id == e.contact_id)).first()
+    return build_enquiry_response(e, contact)
+
 
 

@@ -102,8 +102,10 @@ export interface GetEnquiriesParams {
   status?: string;
   statusIn?: string;
   category?: string;
+  categoryIn?: string;
   interest?: string;
   channel?: string;
+  needsReview?: boolean;
   excludeOutside?: boolean;
   limit?: number;
 }
@@ -113,8 +115,10 @@ export async function getEnquiries(params: GetEnquiriesParams = {}): Promise<Enq
   if (params.status) query.set("status", params.status);
   if (params.statusIn) query.set("status_in", params.statusIn);
   if (params.category) query.set("category", params.category);
+  if (params.categoryIn) query.set("category_in", params.categoryIn);
   if (params.interest) query.set("interest", params.interest);
   if (params.channel) query.set("channel", params.channel);
+  if (params.needsReview !== undefined) query.set("needs_review", String(params.needsReview));
   if (params.excludeOutside !== undefined) query.set("exclude_outside", String(params.excludeOutside));
   if (params.limit !== undefined) query.set("limit", String(params.limit));
 
@@ -150,6 +154,7 @@ export async function updateEnquiry(
   id: number,
   patch: {
     status?: string;
+    category?: string;
     notes?: string;
     reply_draft?: string;
     priority?: string;
@@ -167,4 +172,17 @@ export async function updateEnquiry(
   }
   return res.json();
 }
+
+export async function unspamEnquiry(id: number): Promise<EnquiryResponse> {
+  const res = await fetch(`${API_BASE}/api/enquiries/${id}/unspam`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Unspam failed (${res.status})`);
+  }
+  return res.json();
+}
+
 

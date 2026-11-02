@@ -112,21 +112,20 @@ def save_enquiry(
     session.commit()
     session.refresh(enquiry)
 
-    # 6. Generate reply if status != "Outside" and not already provided
-    if status != "Outside":
-        if extracted.suggested_reply:
-            enquiry.reply_draft = extracted.suggested_reply
-            session.add(enquiry)
-            session.commit()
-        else:
-            try:
-                reply, _ = generate_reply(raw_message, extracted)
-                if reply:
-                    enquiry.reply_draft = reply
-                    session.add(enquiry)
-                    session.commit()
-            except Exception as e:
-                logger.warning("Failed to generate reply for enquiry %s: %s", enquiry.id, e)
+    # 6. Generate reply if not already provided (generate_reply skips spam internally)
+    if extracted.suggested_reply:
+        enquiry.reply_draft = extracted.suggested_reply
+        session.add(enquiry)
+        session.commit()
+    else:
+        try:
+            reply, _ = generate_reply(raw_message, extracted)
+            if reply:
+                enquiry.reply_draft = reply
+                session.add(enquiry)
+                session.commit()
+        except Exception as e:
+            logger.warning("Failed to generate reply for enquiry %s: %s", enquiry.id, e)
 
     # 7. Create Activity(type="created", to_value=status)
     activity = Activity(

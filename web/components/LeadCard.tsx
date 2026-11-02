@@ -86,15 +86,25 @@ export function LeadCard({ enquiry, onStatusChange }: LeadCardProps) {
               <span>⚠</span> Follow-up
             </span>
           )}
-          {enquiry.priority && enquiry.priority !== "normal" && (
-            <span
-              className={`px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider border ${getPriorityStyle(
-                enquiry.priority
-              )}`}
-            >
-              {enquiry.priority}
-            </span>
-          )}
+          <div className="flex items-center gap-1">
+            {enquiry.needs_review && (
+              <span
+                className="bg-rose-100 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded text-[10px] font-semibold inline-flex items-center gap-0.5"
+                title={enquiry.review_reason || "Needs review"}
+              >
+                ⚠ Review
+              </span>
+            )}
+            {enquiry.priority && enquiry.priority !== "normal" && (
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider border ${getPriorityStyle(
+                  enquiry.priority
+                )}`}
+              >
+                {enquiry.priority}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
