@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   getEnquiryDetail,
   getEnquiries,
@@ -20,6 +20,7 @@ import { ActivityTimeline } from "@/components/ActivityTimeline";
 
 interface PageProps {
   params: { id: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
@@ -92,7 +93,9 @@ function toExtractedEnquiry(
 
 export default function LeadDetailPage({ params }: PageProps) {
   const router = useRouter();
-  const idNum = parseInt(params.id, 10);
+  const routeParams = useParams<{ id?: string }>();
+  const idParam = params?.id ?? routeParams?.id;
+  const idNum = idParam ? parseInt(idParam, 10) : NaN;
 
   const [detail, setDetail] = useState<{
     enquiry: EnquiryResponse;
@@ -117,7 +120,7 @@ export default function LeadDetailPage({ params }: PageProps) {
     message: string;
   } | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (isNaN(idNum)) {
       setError("Invalid lead ID");
       setLoading(false);
@@ -153,11 +156,11 @@ export default function LeadDetailPage({ params }: PageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [idNum]);
 
   useEffect(() => {
     loadData();
-  }, [idNum]);
+  }, [loadData]);
 
   // Invalid ID or 404 state
   if (isNaN(idNum) || (error && !detail && !loading)) {
@@ -168,7 +171,7 @@ export default function LeadDetailPage({ params }: PageProps) {
           Lead not found
         </h2>
         <p className="text-xs text-slate-500 mb-6">
-          Enquiry #{params.id} does not exist or could not be loaded.
+          Enquiry #{idParam || "unknown"} does not exist or could not be loaded.
         </p>
         <Link
           href="/pipeline"
