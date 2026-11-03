@@ -2,27 +2,36 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Inbox, Kanban, MessageSquare, BarChart2, User } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/config";
 import HealthPing from "./HealthPing";
+
+function NavIcon({ icon }: { icon: string }) {
+  if (icon === "inbox") return <Inbox size={16} strokeWidth={1.75} />;
+  if (icon === "pipeline") return <Kanban size={16} strokeWidth={1.75} />;
+  if (icon === "queues") return <MessageSquare size={16} strokeWidth={1.75} />;
+  if (icon === "insights") return <BarChart2 size={16} strokeWidth={1.75} />;
+  return null;
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLeadDetail = pathname.startsWith("/leads/");
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col md:flex-row">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-56 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-slate-200 z-30">
-        <div className="p-4 border-b border-slate-200 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+      <aside className="hidden md:flex md:w-56 md:flex-col md:fixed md:inset-y-0 bg-surface border-r border-line z-30">
+        <div className="p-4 border-b border-line flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-[6px] bg-brand text-surface font-semibold flex items-center justify-center text-xs">
             BI
           </div>
           <div>
-            <div className="font-semibold text-slate-900 text-sm tracking-tight leading-tight">
+            <div className="font-semibold text-ink text-sm leading-tight">
               BIAI CRM
             </div>
-            <div className="text-[11px] text-slate-500 leading-tight">
-              Enquiries & Pipeline
+            <div className="text-xs text-muted leading-tight">
+              Enquiries desk
             </div>
           </div>
         </div>
@@ -36,31 +45,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-[6px] text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-slate-100 text-slate-950 font-semibold shadow-xs"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-brand-soft text-brand font-semibold"
+                    : "text-muted hover:bg-canvas hover:text-ink"
                 }`}
               >
-                <span className="text-base select-none">{item.glyph}</span>
+                <NavIcon icon={item.icon} />
                 <span>{item.label}</span>
               </Link>
             );
           })}
 
-          {/* Lead Detail item — only appears/activates when viewing a lead */}
+          {/* Lead Detail item */}
           {isLeadDetail && (
             <Link
               href={pathname}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors bg-slate-100 text-slate-950 shadow-xs"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] text-sm font-semibold transition-colors bg-brand-soft text-brand"
             >
-              <span className="text-base select-none">👤</span>
+              <User size={16} strokeWidth={1.75} />
               <span>Lead detail</span>
             </Link>
           )}
         </nav>
 
-        <div className="p-3 border-t border-slate-200 text-xs text-slate-400">
+        <div className="p-3 border-t border-line text-xs text-muted tabular-nums">
           v0.1.0 (dev)
         </div>
       </aside>
@@ -68,12 +77,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="md:pl-56 flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-xs border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-xs border-b border-line px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="md:hidden w-7 h-7 rounded bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
+            <span className="md:hidden w-7 h-7 rounded-[6px] bg-brand text-surface font-semibold text-xs flex items-center justify-center">
               BI
             </span>
-            <span className="font-semibold text-slate-900 text-base md:text-sm">
+            <span className="font-semibold text-ink text-base md:text-sm">
               BIAI CRM
             </span>
           </div>
@@ -90,7 +99,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex items-center justify-around h-14 md:hidden shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-line flex items-center justify-around h-14 md:hidden">
         {NAV_ITEMS.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -101,12 +110,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 py-1 text-xs transition-colors ${
                 isActive
-                  ? "text-emerald-700 font-semibold"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "text-brand font-semibold"
+                  : "text-muted hover:text-ink"
               }`}
             >
-              <span className="text-lg leading-none">{item.glyph}</span>
-              <span className="text-[10px] mt-0.5">{item.label}</span>
+              <NavIcon icon={item.icon} />
+              <span className="text-[10px] mt-1">{item.label}</span>
             </Link>
           );
         })}

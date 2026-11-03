@@ -4,12 +4,12 @@ export type { Stage } from "@config/stages";
 export interface NavItem {
   href: string;
   label: string;
-  glyph: string;
+  icon: "inbox" | "pipeline" | "queues" | "insights";
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { href: "/inbox", label: "Inbox", glyph: "📥" },
-  { href: "/pipeline", label: "Pipeline", glyph: "📋" },
-  { href: "/queues", label: "Queues", glyph: "💬" },
-  { href: "/insights", label: "Insights", glyph: "📊" },
+  { href: "/inbox", label: "Inbox", icon: "inbox" },
+  { href: "/pipeline", label: "Pipeline", icon: "pipeline" },
+  { href: "/queues", label: "Queues", icon: "queues" },
+  { href: "/insights", label: "Insights", icon: "insights" },
 ] as const;

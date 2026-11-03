@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import type { Activity } from "@/lib/types";
 
 interface ActivityTimelineProps {
@@ -24,7 +25,7 @@ function rel(at: string): string {
 
 export function ActivityTimeline({ activities, channel }: ActivityTimelineProps) {
   if (!activities || activities.length === 0) {
-    return <div className="text-xs text-slate-400 py-3 text-center">No activity yet.</div>;
+    return <div className="text-xs text-muted py-3 text-center">No activity yet.</div>;
   }
 
   const sorted = [...activities].sort(
@@ -37,18 +38,18 @@ export function ActivityTimeline({ activities, channel }: ActivityTimelineProps)
         return (
           <span>
             Enquiry received via{" "}
-            <span className="font-medium text-slate-800">{channel || "channel"}</span>
+            <span className="font-medium text-ink">{channel || "channel"}</span>
           </span>
         );
       case "status_change":
         return (
-          <span>
-            Status:{" "}
-            <span className="font-bangla font-medium text-slate-700">
+          <span className="inline-flex items-center gap-1.5 flex-wrap">
+            <span>Status:</span>
+            <span className="font-bangla font-medium text-muted">
               {act.from_value || "None"}
-            </span>{" "}
-            →{" "}
-            <span className="font-bangla font-semibold text-slate-900">
+            </span>
+            <ArrowRight size={12} strokeWidth={1.75} className="text-muted inline" />
+            <span className="font-bangla font-semibold text-ink">
               {act.to_value}
             </span>
           </span>
@@ -56,7 +57,7 @@ export function ActivityTimeline({ activities, channel }: ActivityTimelineProps)
       case "note":
         return (
           <span>
-            Note: <span className="font-bangla text-slate-700">{act.to_value}</span>
+            Note: <span className="font-bangla text-ink">{act.to_value}</span>
           </span>
         );
       case "reply_edited":
@@ -69,32 +70,31 @@ export function ActivityTimeline({ activities, channel }: ActivityTimelineProps)
   const getBulletColor = (type: string) => {
     switch (type) {
       case "created":
-        return "bg-emerald-500";
+        return "bg-brand";
       case "status_change":
-        return "bg-blue-500";
+        return "bg-ink";
       case "note":
-        return "bg-amber-500";
+        return "bg-warn";
       case "reply_edited":
-        return "bg-purple-500";
+        return "bg-muted";
       default:
-        return "bg-slate-400";
+        return "bg-muted";
     }
   };
 
   return (
-    <div className="relative pl-5 space-y-4 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+    <div className="relative pl-5 space-y-4 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-line">
       {sorted.map((act, idx) => (
         <div key={act.id ?? idx} className="relative text-xs">
           <span
             className={`absolute -left-5 top-1 w-2.5 h-2.5 rounded-full ${getBulletColor(
               act.type
-            )} ring-4 ring-white`}
+            )} ring-4 ring-surface`}
           />
-          <div className="text-slate-800 leading-tight">{renderDescription(act)}</div>
-          <span className="text-[11px] text-slate-400 block mt-0.5">{rel(act.at)}</span>
+          <div className="text-ink leading-tight">{renderDescription(act)}</div>
+          <span className="text-xs text-muted block mt-0.5 tabular-nums">{rel(act.at)}</span>
         </div>
       ))}
     </div>
   );
 }
-

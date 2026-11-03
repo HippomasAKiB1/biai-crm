@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { STAGES, STAGE_COLORS, type Stage } from "@/lib/config";
+import { RefreshCw, AlertTriangle, ArrowRight, Folder, Check } from "lucide-react";
+import { STAGES, type Stage } from "@/lib/config";
 import type { EnquiryResponse } from "@/lib/types";
 import {
   getEnquiries,
@@ -41,6 +42,14 @@ const CATEGORY_OPTIONS = [
   "minor",
   "other",
 ];
+
+const STAGE_TOP_BORDER: Record<string, string> = {
+  New: "border-t-stage-new",
+  Contacted: "border-t-stage-contacted",
+  Interested: "border-t-stage-interested",
+  Paid: "border-t-stage-paid",
+  Lost: "border-t-stage-lost",
+};
 
 export default function PipelinePage() {
   const [enquiries, setEnquiries] = useState<EnquiryResponse[]>([]);
@@ -98,7 +107,7 @@ export default function PipelinePage() {
       setTimeout(() => setToast(null), 4000);
       await loadEnquiries();
     } catch (err: any) {
-      setSeedError("Seed failed — check backend");
+      setSeedError("Seed failed - check backend");
     } finally {
       setSeedLoading(false);
     }
@@ -129,15 +138,15 @@ export default function PipelinePage() {
   return (
     <div className="space-y-6">
       {/* Header & Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-line">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <h1 className="text-[22px] leading-snug font-semibold text-ink flex items-center gap-2">
             <span>Pipeline</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-[6px] bg-surface text-muted border border-line tabular-nums">
               {totalLeads} active leads
             </span>
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-xs text-muted">
             Track leads across sales stages. Non-sales categories are excluded.
           </p>
         </div>
@@ -148,7 +157,7 @@ export default function PipelinePage() {
           <select
             value={filterInterest}
             onChange={(e) => setFilterInterest(e.target.value)}
-            className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="text-xs bg-surface border border-line rounded-[6px] px-2.5 py-1.5 text-ink hover:border-ink focus:outline-none focus:ring-2 focus:ring-brand"
           >
             {INTEREST_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -161,7 +170,7 @@ export default function PipelinePage() {
           <select
             value={filterChannel}
             onChange={(e) => setFilterChannel(e.target.value)}
-            className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="text-xs bg-surface border border-line rounded-[6px] px-2.5 py-1.5 text-ink hover:border-ink focus:outline-none focus:ring-2 focus:ring-brand"
           >
             {CHANNEL_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -174,7 +183,7 @@ export default function PipelinePage() {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="text-xs bg-surface border border-line rounded-[6px] px-2.5 py-1.5 text-ink hover:border-ink focus:outline-none focus:ring-2 focus:ring-brand"
           >
             {CATEGORY_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -186,15 +195,16 @@ export default function PipelinePage() {
           <button
             onClick={() => loadEnquiries()}
             title="Refresh"
-            className="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 hover:bg-slate-50 focus:outline-none"
+            className="inline-flex items-center gap-1.5 text-xs bg-surface border border-line rounded-[6px] px-2.5 py-1.5 text-ink hover:border-ink focus:outline-none"
           >
-            ↻ Refresh
+            <RefreshCw size={14} strokeWidth={1.75} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg flex items-center justify-between">
+        <div className="p-3 bg-urgent-soft border border-urgent/30 text-urgent text-xs rounded-[6px] flex items-center justify-between">
           <span>{error}</span>
           <button
             onClick={() => loadEnquiries()}
@@ -207,16 +217,17 @@ export default function PipelinePage() {
 
       {/* Overdue Follow-ups Alert Strip */}
       {overdueFollowupsCount !== null && overdueFollowupsCount > 0 && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-between shadow-xs">
+        <div className="bg-urgent-soft border border-urgent/30 text-urgent px-4 py-2 rounded-[8px] text-xs font-medium flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span>⚠</span>
-            <span>{overdueFollowupsCount} overdue follow-ups</span>
+            <AlertTriangle size={14} strokeWidth={1.75} />
+            <span className="tabular-nums">{overdueFollowupsCount} overdue follow-ups</span>
           </div>
           <Link
             href="/insights"
-            className="underline hover:text-rose-950 font-bold"
+            className="underline hover:text-urgent/80 font-medium inline-flex items-center gap-1"
           >
-            View Today&apos;s list →
+            <span>View today&apos;s list</span>
+            <ArrowRight size={14} strokeWidth={1.75} />
           </Link>
         </div>
       )}
@@ -226,20 +237,19 @@ export default function PipelinePage() {
       precomputedStatus?.empty &&
       precomputedStatus?.seed_available &&
       enquiries.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-xs space-y-4 my-8">
-          <div className="text-4xl">🗂</div>
+        <div className="bg-surface rounded-[8px] border border-line p-8 text-center max-w-lg mx-auto space-y-4 my-8">
+          <Folder size={32} strokeWidth={1.75} className="mx-auto text-muted" />
           <div>
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-[15px] font-semibold text-ink">
               Demo database is empty.
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Click below to load the 20 sample enquiries (no API calls —
-              instant).
+            <p className="text-xs text-muted mt-1">
+              Click below to load the 20 sample enquiries (no API calls, instant).
             </p>
           </div>
 
           {seedError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg font-medium">
+            <div className="p-3 bg-urgent-soft border border-urgent/30 text-urgent text-xs rounded-[6px] font-medium">
               {seedError}
             </div>
           )}
@@ -247,7 +257,7 @@ export default function PipelinePage() {
           <button
             onClick={handleSeed}
             disabled={seedLoading}
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors shadow-xs disabled:opacity-50"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-[6px] bg-brand hover:bg-brand/90 text-surface font-medium text-xs transition-colors disabled:opacity-50"
           >
             {seedLoading ? "Loading..." : "Load 20 sample enquiries"}
           </button>
@@ -257,32 +267,29 @@ export default function PipelinePage() {
         <div className="overflow-x-auto pb-6">
           <div className="flex gap-4 min-w-[1440px] items-start">
             {STAGES.map((stage) => {
-              const badgeColor =
-                STAGE_COLORS[stage] || "bg-slate-100 text-slate-700";
               const stageLeads = enquiries.filter((e) => e.status === stage);
               const overdueCount = stageLeads.filter((e) => e.is_overdue).length;
+              const topBorder = STAGE_TOP_BORDER[stage] || "border-t-line";
 
               return (
                 <div
                   key={stage}
-                  className="w-[280px] shrink-0 bg-slate-50/80 rounded-xl border border-slate-200/90 p-3 flex flex-col gap-3"
+                  className={`w-[280px] shrink-0 bg-surface rounded-[8px] border border-line border-t-[3px] ${topBorder} p-3 flex flex-col gap-3`}
                 >
                   {/* Column header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className={`text-xs font-semibold px-2.5 py-1 rounded-md ${badgeColor}`}
-                      >
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-[6px] bg-canvas text-ink border border-line">
                         {stage}
                       </span>
-                      <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-medium text-muted bg-surface border border-line px-2 py-0.5 rounded-[6px] tabular-nums">
                         {stageLeads.length}
                       </span>
                     </div>
 
                     {overdueCount > 0 && (
                       <span
-                        className="text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded"
+                        className="text-xs font-medium text-urgent bg-urgent-soft border border-urgent/30 px-1.5 py-0.5 rounded-[6px] tabular-nums"
                         title={`${overdueCount} leads need follow-up`}
                       >
                         {overdueCount} overdue
@@ -293,11 +300,11 @@ export default function PipelinePage() {
                   {/* Column Cards */}
                   <div className="flex flex-col gap-2.5 min-h-[300px]">
                     {loading && enquiries.length === 0 ? (
-                      <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
+                      <div className="py-8 text-center text-xs text-muted animate-pulse">
                         Loading...
                       </div>
                     ) : stageLeads.length === 0 ? (
-                      <div className="py-12 border border-dashed border-slate-200 rounded-lg text-center text-xs text-slate-400">
+                      <div className="py-12 border border-dashed border-line rounded-[6px] text-center text-xs text-muted">
                         No leads in {stage}
                       </div>
                     ) : (
@@ -319,8 +326,8 @@ export default function PipelinePage() {
 
       {/* Floating Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm shadow-lg font-medium flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-2">
-          <span>✓</span>
+        <div className="fixed bottom-6 right-6 bg-ink text-surface px-4 py-2.5 rounded-[6px] text-xs font-medium flex items-center gap-2 z-50 animate-in fade-in slide-in-from-bottom-2">
+          <Check size={14} strokeWidth={1.75} />
           <span>{toast}</span>
         </div>
       )}

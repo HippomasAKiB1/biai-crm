@@ -3,21 +3,52 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f8fafc;
-  --fg: #0f172a;
-  --muted: #64748b;
-  --accent: #059669;
-  --danger: #ef4444;
+  --canvas: #EDF0EB;
+  --surface: #FBFCFA;
+  --ink: #1E2924;
+  --muted: #5E6B65;
+  --line: #D3DAD4;
+  --brand: #0B6B4F;
+  --brand-soft: #DCEBE4;
+  --urgent: #B3261E;
+  --urgent-soft: #F6DEDB;
+  --warn: #9A6700;
+  --warn-soft: #F5E8C8;
+  --stage-new: #9AA7A0;
+  --stage-contacted: #6F9C8B;
+  --stage-interested: #3F8068;
+  --stage-paid: #0B6B4F;
+  --stage-lost: #8A8F8C;
 }
 
 html,
 body {
-  font-family: var(--font-bengali), system-ui, -apple-system, sans-serif;
-  background-color: var(--bg);
-  color: var(--fg);
+  font-family: var(--font-hind-siliguri), var(--font-bengali), system-ui, -apple-system, sans-serif;
+  background-color: var(--canvas);
+  color: var(--ink);
   min-height: 100vh;
 }
 
 .font-bangla {
-  font-family: var(--font-bengali), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-hind-siliguri), var(--font-bengali), system-ui, -apple-system, sans-serif;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-stagger-1 { animation: fadeInSlide 160ms ease-out 0ms both; }
+  .animate-stagger-2 { animation: fadeInSlide 160ms ease-out 120ms both; }
+  .animate-stagger-3 { animation: fadeInSlide 160ms ease-out 240ms both; }
+  .animate-stagger-4 { animation: fadeInSlide 160ms ease-out 360ms both; }
+  .animate-stagger-5 { animation: fadeInSlide 160ms ease-out 480ms both; }
+  .animate-stagger-6 { animation: fadeInSlide 160ms ease-out 600ms both; }
 }
