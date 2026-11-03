@@ -256,6 +256,36 @@ export async function generateWeeklySummary(): Promise<{
   return res.json();
 }
 
+export interface EvalRow {
+  id: number;
+  text: string;
+  expected: any;
+  actual: any;
+  match: Record<string, boolean>;
+}
+
+export interface EvalSet {
+  total: number;
+  accuracy: Record<string, number>;
+  rows: EvalRow[];
+}
+
+export interface EvalResult {
+  samples: EvalSet;
+  holdout: EvalSet;
+}
+
+export async function runEval(): Promise<EvalResult> {
+  const res = await fetch(`${API_BASE}/api/eval/run`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Run eval failed (${res.status})`);
+  }
+  return res.json();
+}
+
 
 
 

@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { generateWeeklySummary, getFollowups } from "@/lib/api";
+import {
+  generateWeeklySummary,
+  getFollowups,
+  runEval,
+  type EvalResult,
+  type EvalRow,
+} from "@/lib/api";
 import type { EnquiryResponse } from "@/lib/types";
 
 function formatDue(dateStr: string | null | undefined): string {
@@ -53,6 +59,24 @@ export default function InsightsPage() {
   } | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const [evalData, setEvalData] = useState<EvalResult | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  const [evalTab, setEvalTab] = useState<"samples" | "holdout">("samples");
+
+  const handleRunEval = async () => {
+    try {
+      setEvalLoading(true);
+      setEvalError(null);
+      const res = await runEval();
+      setEvalData(res);
+    } catch (err: any) {
+      setEvalError(err?.message || "Failed to run evaluation");
+    } finally {
+      setEvalLoading(false);
+    }
+  };
 
   const handleGenerateSummary = async () => {
     try {
@@ -353,16 +377,312 @@ export default function InsightsPage() {
         )}
       </section>
 
-      {/* Section 3: Eval Accuracy placeholder */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-2">
-        <div className="text-2xl mb-1">🎯</div>
-        <h3 className="text-base font-bold text-slate-900">
-          Eval Accuracy
-        </h3>
-        <p className="text-xs text-slate-500">
-          Benchmark AI extraction and classification against verified ground truth labels — coming in T15.
-        </p>
-      </div>
+      {/* Section 3: Eval Accuracy */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎯</span>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Eval Accuracy
+              </h2>
+              <p className="text-xs text-slate-500">
+                Measures the AI&apos;s performance on the 20 tuning samples and a separate 12-message holdout set (untouched by prompt tuning).
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleRunEval}
+            disabled={evalLoading}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors shadow-xs disabled:opacity-50 shrink-0"
+          >
+            {evalLoading ? (
+              <>
+                <span className="animate-spin text-sm">⏳</span>
+                <span>Running Eval...</span>
+              </>
+            ) : (
+              <>
+                <span>🚀</span>
+                <span>{evalData ? "Re-run Evaluation" : "Run Evaluation"}</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {evalError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg flex items-center justify-between">
+            <span>{evalError}</span>
+            <button
+              onClick={handleRunEval}
+              className="underline font-semibold ml-2 hover:text-rose-900"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {evalLoading && !evalData && (
+          <div className="py-12 text-center space-y-3">
+            <div className="inline-block animate-spin text-2xl">⚙️</div>
+            <p className="text-xs text-slate-500 font-medium">
+              Evaluating 20 tuning samples and 12 holdout test cases against ground-truth labels...
+            </p>
+          </div>
+        )}
+
+        {!evalData && !evalLoading && !evalError && (
+          <div className="py-10 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
+            Click &ldquo;Run Evaluation&rdquo; to benchmark extraction accuracy and view failure cases.
+          </div>
+        )}
+
+        {evalData && (
+          <div className="space-y-6">
+            {/* Side-by-Side Accuracy Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left: 20 Tuning Samples */}
+              <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">20 Tuning Samples</h3>
+                    <p className="text-[11px] text-slate-500">Known training baseline from sample enquiries</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-emerald-600">
+                      {evalData.samples.accuracy.overall}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-medium">overall</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${evalData.samples.accuracy.overall}%` }}
+                  />
+                </div>
+
+                {/* Field breakdown scores */}
+                <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-200/80 text-center">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Category</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.samples.accuracy.category}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Language</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.samples.accuracy.language}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Interest</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.samples.accuracy.interest}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Priority</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.samples.accuracy.priority}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Review</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.samples.accuracy.review}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: 12 Holdout Messages */}
+              <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">12 Holdout Messages</h3>
+                    <p className="text-[11px] text-slate-500">Unseen holdout test set with edge cases</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-blue-600">
+                      {evalData.holdout.accuracy.overall}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-medium">overall</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${evalData.holdout.accuracy.overall}%` }}
+                  />
+                </div>
+
+                {/* Field breakdown scores */}
+                <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-200/80 text-center">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Category</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.holdout.accuracy.category}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Language</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.holdout.accuracy.language}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Interest</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.holdout.accuracy.interest}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Priority</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.holdout.accuracy.priority}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Review</span>
+                    <span className="text-xs font-bold text-slate-800">{evalData.holdout.accuracy.review}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mismatches Section */}
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Mismatches &amp; Failure Analysis
+                  </h3>
+                  <span className="text-[10px] bg-rose-50 text-rose-700 font-semibold px-2 py-0.5 rounded-full border border-rose-200">
+                    {(evalTab === "samples" ? evalData.samples : evalData.holdout).rows.filter(
+                      (r) => !r.match.category || !r.match.language || !r.match.interest || !r.match.priority || !r.match.review
+                    ).length} failed
+                  </span>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg text-xs">
+                  <button
+                    onClick={() => setEvalTab("samples")}
+                    className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                      evalTab === "samples"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    20 Samples ({evalData.samples.rows.filter(
+                      (r) => !r.match.category || !r.match.language || !r.match.interest || !r.match.priority || !r.match.review
+                    ).length})
+                  </button>
+                  <button
+                    onClick={() => setEvalTab("holdout")}
+                    className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                      evalTab === "holdout"
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    12 Holdout ({evalData.holdout.rows.filter(
+                      (r) => !r.match.category || !r.match.language || !r.match.interest || !r.match.priority || !r.match.review
+                    ).length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Mismatch table */}
+              {(() => {
+                const currentSet = evalTab === "samples" ? evalData.samples : evalData.holdout;
+                const mismatches = currentSet.rows.filter(
+                  (r) => !r.match.category || !r.match.language || !r.match.interest || !r.match.priority || !r.match.review
+                );
+
+                if (mismatches.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+                      🎉 100% accuracy on all evaluated fields! No mismatches detected.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-[10px] uppercase font-semibold text-slate-500 border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-3 w-12">ID</th>
+                          <th className="py-2.5 px-3 min-w-[240px]">Message Snippet</th>
+                          <th className="py-2.5 px-3">Discrepancy (Expected vs Actual)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {mismatches.map((r) => {
+                          const mismatchFields = [];
+                          if (!r.match.category) {
+                            mismatchFields.push({
+                              field: "Category",
+                              exp: r.expected.category,
+                              act: r.actual.category,
+                            });
+                          }
+                          if (!r.match.language) {
+                            mismatchFields.push({
+                              field: "Language",
+                              exp: r.expected.language,
+                              act: r.actual.language,
+                            });
+                          }
+                          if (!r.match.interest) {
+                            mismatchFields.push({
+                              field: "Interest",
+                              exp: r.expected.interest,
+                              act: r.actual.interest,
+                            });
+                          }
+                          if (!r.match.priority) {
+                            mismatchFields.push({
+                              field: "Priority",
+                              exp: r.expected.priority,
+                              act: r.actual.priority,
+                            });
+                          }
+                          if (!r.match.review) {
+                            mismatchFields.push({
+                              field: "Review",
+                              exp: String(r.expected.review_required),
+                              act: String(r.actual.review_required),
+                            });
+                          }
+
+                          return (
+                            <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="py-2.5 px-3 font-mono font-bold text-slate-700 align-top">
+                                #{r.id}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 align-top font-sans leading-relaxed">
+                                &ldquo;{r.text}&rdquo;
+                              </td>
+                              <td className="py-2.5 px-3 align-top">
+                                <div className="space-y-1">
+                                  {mismatchFields.map((mf) => (
+                                    <div
+                                      key={mf.field}
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-rose-50 border border-rose-200 text-[11px] text-rose-800 mr-2 mb-1"
+                                    >
+                                      <span className="font-bold">{mf.field}:</span>
+                                      <span className="text-slate-600">exp:</span>
+                                      <span className="font-semibold text-slate-900">{mf.exp}</span>
+                                      <span className="text-rose-500 font-bold">&ne;</span>
+                                      <span className="text-slate-600">act:</span>
+                                      <span className="font-bold text-rose-700">{mf.act}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
