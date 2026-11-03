@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 from pathlib import Path
@@ -116,6 +117,7 @@ def extract(raw_message: str) -> tuple[ExtractResult, str]:
 
 REPLY_PROMPT = (REPO_ROOT / "prompts" / "reply.md").read_text(encoding="utf-8")
 KB_JSON = (REPO_ROOT / "data" / "knowledge_base.json").read_text(encoding="utf-8")
+SUMMARY_PROMPT = (REPO_ROOT / "prompts" / "summary.md").read_text(encoding="utf-8")
 
 
 class ReplyError(Exception):
@@ -222,4 +224,61 @@ def generate_reply(
         return verdict.sanitized_reply, "guard"
 
     # (h) Return (text, "llm")
+    return text, "llm"
+
+
+def generate_summary(stats: dict) -> tuple[str, str]:
+    """
+    Returns (summary_text, source) where source is 'cache' or 'llm'.
+    Raises ReplyError on failure or empty response.
+    """
+    user_content = json.dumps(stats, sort_keys=True)
+    hit = cache.get("summary", settings.llm_model, SUMMARY_PROMPT, user_content)
+    if hit and "summary" in hit:
+        return hit["summary"], "cache"
+
+    messages = [
+        {"role": "system", "content": SUMMARY_PROMPT},
+        {"role": "user", "content": user_content},
+    ]
+
+    try:
+        resp = client.chat.completions.create(
+            model=settings.llm_model,
+            messages=messages,
+            temperature=0.4,
+            max_tokens=1500,
+            timeout=30.0,
+            extra_body={"reasoning": {"max_tokens": 0}},
+        )
+    except Exception as e:
+        if _is_rate_limit_error(e):
+            logger.warning("Rate limit encountered in summary, sleeping 20s before retry")
+            time.sleep(20)
+            try:
+                resp = client.chat.completions.create(
+                    model=settings.llm_model,
+                    messages=messages,
+                    temperature=0.4,
+                    max_tokens=1500,
+                    timeout=30.0,
+                    extra_body={"reasoning": {"max_tokens": 0}},
+                )
+            except Exception as e2:
+                raise ReplyError("rate limited — try again later") from e2
+        else:
+            raise ReplyError(f"summary generation failed: {str(e)[:200]}") from e
+
+    logger.info(
+        "llm_call step=%s model_served=%s source=%s",
+        "summary",
+        getattr(resp, "model", "unknown"),
+        "llm",
+    )
+
+    text = (resp.choices[0].message.content or "").strip()
+    if not text:
+        raise ReplyError("empty summary from LLM")
+
+    cache.put("summary", settings.llm_model, SUMMARY_PROMPT, user_content, {"summary": text})
     return text, "llm"

@@ -233,6 +233,29 @@ export async function getPrecomputedStatus(): Promise<{
   return res.json();
 }
 
+export async function generateWeeklySummary(): Promise<{
+  summary: string;
+  stats: {
+    total_enquiries: number;
+    active_leads: number;
+    by_status: Record<string, number>;
+    by_category: Record<string, number>;
+    by_channel: Record<string, number>;
+    top_companies: Array<{ name: string; headcount: number | null }>;
+    overdue_count: number;
+  };
+  source: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/summary/weekly`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Generate weekly summary failed (${res.status})`);
+  }
+  return res.json();
+}
+
 
 
 

@@ -96,3 +96,10 @@ class EnquiryDetailResponse(BaseModel):
     contact: Contact
     activities: list[Activity]
 
+
+class SummaryResponse(BaseModel):
+    summary: str
+    stats: dict
+    source: str
+
+
